@@ -1,4 +1,4 @@
-#include <dwl/solver/IpoptWrapper.h>
+#include <solver/IpoptWrapper.h>
 
 
 namespace dwl

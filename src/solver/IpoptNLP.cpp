@@ -1,4 +1,4 @@
-#include <dwl/solver/IpoptNLP.h>
+#include <solver/IpoptNLP.h>
 
 
 namespace dwl

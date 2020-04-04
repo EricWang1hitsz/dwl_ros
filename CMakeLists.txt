@@ -14,7 +14,9 @@ find_package(RBDL REQUIRED)
 #find_package(yaml_cpp REQUIRED)
 #find_package(QPOASES REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(ifopt 2.0.1 REQUIRED)
+find_package(PkgConfig)
+#find_package(IPOPT 3.12.4 REQUIRED)
+pkg_check_modules(IPOPT ipopt>=3.12.4)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -123,7 +125,7 @@ include_directories(
  include
  ${catkin_INCLUDE_DIRS}
  ${EIGEN3_INCLUDE_DIR}
- ${ifopt_INCLUDE_DIRS}
+ ${IPOPT_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -147,7 +149,8 @@ add_library(${PROJECT_NAME} SHARED
                                     src/solver/AnytimeRepairingAStar.cpp
                                     src/solver/QuadraticProgram.cpp
                                     src/solver/QuadProg++QP.cpp
-                                    #src/solver/IpoptNLP.cpp
+                                    src/solver/IpoptNLP.cpp
+                                    src/solver/IpoptWrapper.cpp
                                     src/model/FloatingBaseSystem.cpp
                                     src/model/WholeBodyKinematics.cpp
                                     src/model/WholeBodyDynamics.cpp
@@ -191,7 +194,7 @@ add_library(${PROJECT_NAME} SHARED
                                     src/utils/SplineInterpolation.cpp
                                     src/utils/YamlWrapper.cpp
                                     src/utils/CollectData.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${ifopt_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -201,8 +204,8 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${ifopt_LIBRARIES})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/dwl_ros_node.cpp)
-add_executable(test dwl_test.cpp)
-target_link_libraries(test ${catkin_LIBRARIES} ${PROJECT_NAME})
+add_executable(dwl_test src/test/dwl_test.cpp)
+target_link_libraries(dwl_test ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
