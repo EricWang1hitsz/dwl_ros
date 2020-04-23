@@ -228,7 +228,7 @@ void getFloatingBaseJointMotion(JointID& joints,
 	boost::shared_ptr<urdf::ModelInterface> model = urdf::parseURDF(urdf_model);
 
 	// Getting the free joint names
-	JointAxis joint_axis;
+    JointAxis joint_axis; //typedef std::map<std::string,Eigen::Vector3d> JointAxis;
 	getJointAxis(joint_axis, urdf_model, floating);
 
 	for (urdf_model::JointAxis::iterator jnt_it = joint_axis.begin();

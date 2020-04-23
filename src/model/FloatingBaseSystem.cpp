@@ -42,10 +42,10 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	yarf_ = system_file;
 
 	// Getting information about the floating-base joints
-	urdf_model::JointID floating_joint_names;
-	urdf_model::getJointNames(floating_joint_names, urdf_model, urdf_model::floating);
+    urdf_model::JointID floating_joint_names; //typedef std::map<std::string,unsigned int> JointID;
+    urdf_model::getJointNames(floating_joint_names, urdf_model, urdf_model::floating); //enum JointType {free = 0, fixed, floating, all};
 	num_floating_joints_ = floating_joint_names.size();
-
+    std::cout << "number of floating joints:" << num_floating_joints_ << std::endl;
 	urdf_model::JointID floating_joint_motions;
 	if (num_floating_joints_ > 0) {
 		urdf_model::getFloatingBaseJointMotion(floating_joint_motions, urdf_model);
@@ -74,7 +74,7 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	if (isFullyFloatingBase())
 		base_id = 6;
 	else
-		base_id = getFloatingBaseDoF();
+        base_id = getFloatingBaseDoF(); //return num_floating_joints_;
 	floating_body_name_ = rbd_model_.GetBodyName(base_id);
 
 	// Getting the information about the actuated joints
@@ -82,7 +82,10 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	urdf_model::getJointNames(free_joint_names, urdf_model, urdf_model::free);
 	urdf_model::getJointLimits(joint_limits_, urdf_model);
 	unsigned int num_free_joints = free_joint_names.size();
+    std::cout << "number of free joints:" << num_free_joints << std::endl;
+    // TODO(EricWang): Does quadruped have any floating joints?
 	num_joints_ = num_free_joints - num_floating_joints_;
+    std::cout << "number of joints:" << num_joints_ << std::endl;
 	for (urdf_model::JointID::iterator jnt_it = free_joint_names.begin();
 			jnt_it != free_joint_names.end(); jnt_it++) {
 		std::string joint_name = jnt_it->first;
@@ -107,6 +110,7 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	for (dwl::urdf_model::JointID::const_iterator joint_it = joints.begin();
 			joint_it != joints.end(); joint_it++) {
 		std::string joint_name = joint_it->first;
+        std::cout << "joint name:" << joint_name << std::endl;
 		joint_names_.push_back(joint_name);
 	}
 
@@ -114,7 +118,7 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	num_system_joints_ = num_floating_joints_ + num_joints_;
 	if (isFullyFloatingBase()) {
 		num_system_joints_ = 6 + num_joints_;
-		if (hasFloatingBaseConstraints())
+        if (hasFloatingBaseConstraints()) // any of 6 DOF is constrained.
 			type_of_system_ = ConstrainedFloatingBase;
 		else
 			type_of_system_ = FloatingBase;
@@ -130,37 +134,42 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 	for (dwl::urdf_model::LinkID::const_iterator ee_it = end_effectors_.begin();
 			ee_it != end_effectors_.end(); ee_it++) {
 		std::string name = ee_it->first;
+        std::cout << "end effector name:" << name << std::endl;
 		end_effector_names_.push_back(name);
 	}
 
 	// Resetting the system description
 	default_joint_pos_ = Eigen::VectorXd::Zero(num_joints_);
-	if (!system_file.empty())
-		resetSystemDescription(system_file);
+    // FIXME(EricWang): Segmentation fault (core dumped).
+//	if (!system_file.empty())
+//		resetSystemDescription(system_file);
 
 	// Defining the number of end-effectors
 	num_end_effectors_ = end_effectors_.size();
+    std::cout << "number of end effectors:" << num_end_effectors_ << std::endl;
 
-	if (num_feet_ == 0) {
-		printf(YELLOW "Warning: setting up all the end-effectors are feet\n"
-				COLOR_RESET);
-		num_feet_ = num_end_effectors_;
-		foot_names_ = end_effector_names_;
-		feet_ = end_effectors_;
-	}
+    if (num_feet_ == 0) {
+        printf(YELLOW "Warning: setting up all the end-effectors are feet\n"
+                COLOR_RESET);
+        num_feet_ = num_end_effectors_;
+        foot_names_ = end_effector_names_;
+        feet_ = end_effectors_;
+    }
 
 	// Resizing the state vectors
 	if (getTypeOfDynamicSystem() == FloatingBase ||
-			getTypeOfDynamicSystem() == ConstrainedFloatingBase) {
+			getTypeOfDynamicSystem() == ConstrainedFloatingBase) {    
 		full_state_.resize(6 + getJointDoF());
+        std::cout << "FLOATING BASE SYSTEM" << std::endl;
 	} else if (getTypeOfDynamicSystem() == VirtualFloatingBase) {
 		unsigned int base_dof = getFloatingBaseDoF();
 		full_state_.resize(base_dof + getJointDoF());
+        std::cout << "VIRTUAL FLOATING BASE SYSTEM" << std::endl;
 	} else {
 		full_state_.resize(getJointDoF());
 	}
 	joint_state_.resize(getJointDoF());
-
+    std::cout << "Testn" << std::endl;
 	// Getting gravity information
 	grav_acc_ = rbd_model_.gravity.norm();
 	grav_dir_ = rbd_model_.gravity / grav_acc_;
@@ -671,7 +680,8 @@ const Eigen::VectorXd& FloatingBaseSystem::toGeneralizedJointState(const rbd::Ve
 
 		full_state_ << virtual_base, joint_state;
 	} else {
-		full_state_ = joint_state;
+        //! eric_wang: Fixed base.
+        full_state_ = joint_state;
 	}
 
 	return full_state_;

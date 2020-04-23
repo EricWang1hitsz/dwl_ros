@@ -348,6 +348,7 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 
 	// First pass
 	for (unsigned int i = 1; i < base_dof + 1; i++) {
+        // The id of the parents body.
 		unsigned int lambda = model.lambda[i];
 
 		jcalc (model, i, Q, QDot);

@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     optimal_control.addDynamicalSystem(dynamic_system);
     optimal_control.addCost(cost);
 
-    solver->setFromConfigFile("../ipopt_config.yaml");
+    solver->setFromConfigFile("../ipopt_config.yaml");  // Yamlcpp wrapper.
 
     std::clock_t startcputime = std::clock();
     solver->init();

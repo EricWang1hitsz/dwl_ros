@@ -105,7 +105,8 @@ void WholeBodyDynamics::computeFloatingBaseInverseDynamics(rbd::Vector6d& base_a
 	convertAppliedExternalForces(fext, ext_force, q);
 
 	// Computing the inverse dynamics with Recursive Newton-Euler Algorithm (RNEA)
-	if (system_.isFullyFloatingBase()) {
+    //! eric_wang: Base DOF 6;
+    if (system_.isFullyFloatingBase()) {
 		RigidBodyDynamics::Math::SpatialVector base_ddot =
 				RigidBodyDynamics::Math::SpatialVector(base_acc);
 		rbd::FloatingBaseInverseDynamics(system_.getRBDModel(),
@@ -134,7 +135,7 @@ void WholeBodyDynamics::computeFloatingBaseInverseDynamics(rbd::Vector6d& base_a
 	system_.fromGeneralizedJointState(base_wrench, joint_forces, tau);
 }
 
-
+//! eric_wang: should use this model and need to estimate contact force first.
 void WholeBodyDynamics::computeConstrainedFloatingBaseInverseDynamics(Eigen::VectorXd& joint_forces,
 																	  const rbd::Vector6d& base_pos,
 																	  const Eigen::VectorXd& joint_pos,
@@ -181,6 +182,7 @@ const Eigen::MatrixXd& WholeBodyDynamics::computeJointSpaceInertiaMatrix(const r
 
 	// Computing the joint space inertia matrix using the Composite
 	// Rigid Body Algorithm
+    // \f$ M(q) \f$
 	RigidBodyDynamics::CompositeRigidBodyAlgorithm(system_.getRBDModel(),
 												   q, joint_inertia_mat_, true);
 
@@ -227,7 +229,7 @@ const rbd::Vector6d& WholeBodyDynamics::computeGravitoWrench(const Eigen::Vector
 			-system_.getTotalMass() * system_.getGravityAcceleration();
 
 	// Mapping the gravitational wrench in the world frame
-	grav_wrench_.topRows<3>() = com_pos.cross(weight_vec);
+    grav_wrench_.topRows<3>() = com_pos.cross(weight_vec);
 	grav_wrench_.bottomRows<3>() = weight_vec;
 
 	return grav_wrench_;
@@ -780,7 +782,7 @@ void WholeBodyDynamics::computeConstrainedConsistentAcceleration(rbd::Vector6d& 
 
 	// Computing contact linear positions and the J_d*q_d component, which
 	// are used for computing the joint accelerations
-	rbd::BodyVectorXd op_pos, jacd_qd;
+    rbd::BodyVectorXd op_pos, jacd_qd; //! eric_wang: contact position.
 	kinematics_.computeForwardKinematics(op_pos,
 										 base_pos, joint_pos,
 										 contacts, rbd::Linear);

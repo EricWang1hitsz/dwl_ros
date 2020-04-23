@@ -10,13 +10,28 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED)
 
 find_package(RBDL REQUIRED)
+find_package(RBDL COMPONENTS URDFReader REQUIRED)
 #find_package(URDF REQUIRED) # error
-#find_package(yaml_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 #find_package(QPOASES REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PkgConfig)
 #find_package(IPOPT 3.12.4 REQUIRED)
 pkg_check_modules(IPOPT ipopt>=3.12.4)
+#pkg_check_modules(YAMLCPP)
+
+##Find yaml_cpp dependency.
+#pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
+
+#find_path(YAML_CPP_INCLUDE_DIR
+#    NAMES yaml_cpp.h
+#    PATHS ${YAML_CPP_INCLUDE_DIRS})
+
+#find_library(YAML_CPP_LIBRARY
+#    NAMES YAML_CPP
+#    PATHS ${YAML_CPP_LIBRARY_DIRS})
+
+#link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -110,6 +125,8 @@ catkin_package(
   INCLUDE_DIRS
   include
   ${EIGEN3_INCLUDE_DIR}
+  #${YAML_CPP_INCLUDE_DIR}
+  #${RBDL_INCLUDE_DIRS}
   LIBRARIES dwl_ros
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
@@ -126,6 +143,8 @@ include_directories(
  ${catkin_INCLUDE_DIRS}
  ${EIGEN3_INCLUDE_DIR}
  ${IPOPT_INCLUDE_DIRS}
+ ${RBDL_INCLUDE_DIRS}
+ ${YAML_CPP_INCLUDE_DIR}
 )
 
 ## Declare a C++ library
@@ -142,6 +161,7 @@ add_library(${PROJECT_NAME} SHARED
                                     src/locomotion/MotionPlanning.cpp
                                     src/locomotion/ContactPlanning.cpp
                                     src/locomotion/WholeBodyTrajectoryOptimization.cpp
+                                    #src/locomotion/ModelPredictiveControl.cpp
                                     src/solver/SearchTreeSolver.cpp
                                     src/solver/OptimizationSolver.cpp
                                     src/solver/Dijkstrap.cpp
@@ -194,7 +214,7 @@ add_library(${PROJECT_NAME} SHARED
                                     src/utils/SplineInterpolation.cpp
                                     src/utils/YamlWrapper.cpp
                                     src/utils/CollectData.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES} ${RBDL_URDFReader_LIBRARY})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -204,8 +224,17 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/dwl_ros_node.cpp)
-add_executable(dwl_test src/test/dwl_test.cpp)
-target_link_libraries(dwl_test ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES})
+
+## Floating base system test.
+add_executable(FloatingBaseSample src/test/FloatingBaseSample.cpp)
+target_link_libraries(FloatingBaseSample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES})
+
+## Whole body dynamics test.
+add_executable(wholebodydynamicssample src/test/WholeBodyDynamicsSample.cpp)
+target_link_libraries(wholebodydynamicssample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES})
+
+#add_executable(dwl_test src/test/dwl_test.cpp)
+#target_link_libraries(dwl_test ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

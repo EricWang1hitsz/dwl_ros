@@ -8,7 +8,7 @@ dwl_ros has the following required dependencies:
 * [Boost](http://www.boost.org) (version 1.5.4 or higher)
 * [CMake](http://www.cmake.org) (version 2.8.3 or higher)
 * [Eigen](http://eigen.tuxfamily.org) (version 3.2.0 or higher)
-* [Yaml-cpp](https://code.google.com/p/yaml-cpp/) (version 0.5.2 or higher)
+* [Yaml-cpp](https://code.google.com/p/yaml-cpp/) (version 0.5.1) Higer version may has error, tested.
 * [RBDL](http://rbdl.bitbucket.org/) (version 2.4.0 or higher)
 * [urdfdom_header](https://github.com/ros/urdfdom_headers) (version 0.2.3 or higher)
 * [console_bridge](https://github.com/ros/console_bridge) (version 0.2.7 or higher)
@@ -16,6 +16,26 @@ dwl_ros has the following required dependencies:
 * [Octomap](http://octomap.github.io) (version 1.6.8 or higher)
 
 you can install all the dependencies with script file.
+
+
+### Error Correcting
+When writing cmakelist, `find_package(yaml-cpp)`has error, renew a `yaml-cpp-config.cmake`:
+```
+FIND_PATH(YAML_CPP_INCLUDE_DIR yaml_cpp.h
+          /usr/local/include
+          /usr/include
+          )
+
+FIND_LIBRARY(YAML_CPP_LIBRARIES NAMES YAML_CPP
+             PATHS
+             /usr/local/lib
+             /usr/lib
+             )
+```
+cuplicate cmake file into system:
+```
+sudo cp yaml-cpp-config.cmake /usr/local/lib/cmake/yaml-cpp
+```
 
 The following dependencies are optional, mainly used by optimization:
 * [Doxygen](http://www.doxygen.org)
