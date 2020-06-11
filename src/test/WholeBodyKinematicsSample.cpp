@@ -1,6 +1,7 @@
-#include <dwl/WholeBodyState.h>
-#include <dwl/model/WholeBodyKinematics.h>
+#include <WholeBodyState.h>
+#include <model/WholeBodyKinematics.h>
 
+using namespace std;
 
 
 int main(int argc, char **argv)
@@ -10,8 +11,8 @@ int main(int argc, char **argv)
 	dwl::model::WholeBodyKinematics wkin;
 
 	// Resetting the system from the hyq urdf file
-	std::string urdf_file = DWL_SOURCE_DIR"/sample/hyq.urdf";
-	std::string yarf_file = DWL_SOURCE_DIR"/config/hyq.yarf";
+    string urdf_file = "/home/hit/catkin_ws_code/src/dwl_ros/src/test/hyq.urdf";
+    string yarf_file = "/home/hit/catkin_ws_code/src/dwl_ros/src/test/hyq.yarf";
 	fbs.resetFromURDFFile(urdf_file, yarf_file);
 	wkin.modelFromURDFFile(urdf_file, yarf_file);
 
@@ -41,13 +42,13 @@ int main(int argc, char **argv)
 	wkin.computeJacobian(jacobian,
 						 ws.base_pos, ws.joint_pos,
 						 fbs.getEndEffectorNames(),
-						 dwl::rbd::Full);
+                         dwl::rbd::Linear); // 12 x 18
 	std::cout << "---------------------------------------" << std::endl;
 	std::cout << jacobian << " = jacobian" << std::endl;
-	wkin.getFixedBaseJacobian(fixed_jac, jacobian);
+    wkin.getFixedBaseJacobian(fixed_jac, jacobian); // 12 x 12
 	std::cout << "---------------------------------------" << std::endl;
 	std::cout << fixed_jac << " = fixed jacobian" << std::endl;
-	wkin.getFloatingBaseJacobian(floating_jac, jacobian);
+    wkin.getFloatingBaseJacobian(floating_jac, jacobian); // 12 x 6
 	std::cout << "---------------------------------------" << std::endl;
 	std::cout << floating_jac << " = floating jacobian" << std::endl << std::endl;
 

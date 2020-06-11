@@ -106,7 +106,7 @@ Vector6d convertPointForceToSpatialForce(Vector6d& force,
 	return spatial_force;
 }
 
-
+// compute contact jacobian matrix.
 void computePointJacobian(RigidBodyDynamics::Model& model,
 						  const RigidBodyDynamics::Math::VectorNd &Q,
 						  unsigned int body_id,
@@ -117,7 +117,6 @@ void computePointJacobian(RigidBodyDynamics::Model& model,
 	using namespace RigidBodyDynamics;
 	using namespace RigidBodyDynamics::Math;
 	LOG << "-------- " << __func__ << " --------" << std::endl;
-
 	// update the Kinematics if necessary
 	if (update_kinematics) {
 		UpdateKinematicsCustom(model, &Q, NULL, NULL);
@@ -240,6 +239,7 @@ rbd::Vector6d computePointAcceleration(RigidBodyDynamics::Model& model,
 }
 
 
+// refer to rigid body dynamics algorithms.
 void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 								 const RigidBodyDynamics::Math::VectorNd &Q,
 								 const RigidBodyDynamics::Math::VectorNd &QDot,
@@ -251,11 +251,16 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 	using namespace RigidBodyDynamics;
 	using namespace RigidBodyDynamics::Math;
 
+    std::cout << "Total body size: " << model.mBodies.size() << std::endl;
+
 	// Checking if it's a floating-base robot
-	bool is_floating_base = false;
+    // bool is_floating_base = false;
+    bool is_floating_base = true;
 	int i = 1;
+    // not implement
 	while (model.mBodies[i].mIsVirtual) {
 		i = model.mu[i][0];
+        std:: cout << "all of child body size: " << i << std::endl;
 		if (i == 6)
 			is_floating_base = true;
 	}
@@ -264,14 +269,18 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 		LOG << "-------- " << __func__ << " --------" << std::endl;
 
 		// First pass
-		for (unsigned int i = 1; i < 7; i++) {
+//        for (unsigned int i = 1; i < 7; i++) {
+        for (unsigned int i = 1; i < model.mBodies.size(); i++) {
 			unsigned int lambda = model.lambda[i];
+            std::cout << "parent body id of body " << i << " : "<< lambda << std::endl;
 
 			jcalc (model, i, Q, QDot);
+            // Transformation from the base to bodies reference frame.
 			model.X_base[i] = model.X_lambda[i] * model.X_base[lambda];
 		}
 
-		for (unsigned int i = 7; i < model.mBodies.size(); i++) {
+//        for (unsigned int i = 7; i < model.mBodies.size(); i++) {
+        for (unsigned int i = 1; i < model.mBodies.size(); i++) {
 			unsigned int q_index = model.mJoints[i].q_index;
 			unsigned int lambda = model.lambda[i];
 			jcalc (model, i, Q, QDot);
@@ -279,6 +288,7 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 			model.X_base[i] = model.X_lambda[i] * model.X_base[lambda];
 
 			model.v[i] = model.X_lambda[i].apply(model.v[lambda]) + model.v_J[i];
+            // The velocity dependent spatial acceleration for joint.
 			model.c[i] = model.c_J[i] + crossm(model.v[i],model.v_J[i]);
 
 			if (model.mJoints[i].mDoFCount == 3) {
@@ -301,23 +311,30 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 		}
 
 		// Second pass
-		model.Ic[6] = model.I[6];
-		model.f[6] = model.I[6] * model.a[6] + crossf(model.v[6],model.I[6] * model.v[6]);
-		if (f_ext != NULL && (*f_ext)[6] != SpatialVector::Zero())
-			model.f[6] -= (*f_ext)[6];
+//        model.Ic[6] = model.I[6];
+//        model.f[6] = model.I[6] * model.a[6] + crossf(model.v[6],model.I[6] * model.v[6]);
+//        if (f_ext != NULL && (*f_ext)[6] != SpatialVector::Zero())
+//            model.f[6] -= (*f_ext)[6];
+        model.Ic[1] = model.I[1];
+        model.f[1] = model.I[1] * model.a[1] + crossf(model.v[1],model.I[1] * model.v[1]);
+        if (f_ext != NULL && (*f_ext)[1] != SpatialVector::Zero())
+            model.f[1] -= (*f_ext)[1]; // corresponding to body 0 in RBDA.
 
-		for (unsigned int i = model.mBodies.size() - 1; i > 6; i--) {
+//        for (unsigned int i = model.mBodies.size() - 1; i > 6; i--) {
+        for (unsigned int i = model.mBodies.size() - 1; i > 0; i--) {
 			unsigned int lambda = model.lambda[i];
 
 			model.Ic[lambda] = model.Ic[lambda] + model.X_lambda[i].apply(model.Ic[i]);
 			model.f[lambda] = model.f[lambda] + model.X_lambda[i].applyTranspose(model.f[i]);
 		}
-		base_acc << model.a[6].segment<3>(3) + model.gravity, model.a[6].segment<3>(0);
+//		base_acc << model.a[6].segment<3>(3) + model.gravity, model.a[6].segment<3>(0);
+        base_acc << model.a[1].segment<3>(3) + model.gravity, model.a[1].segment<3>(0);
 
 		// Third pass
-		model.a[6] = - model.Ic[6].toMatrix().inverse() * model.f[6];
-
-		for (unsigned int i = 7; i < model.mBodies.size(); i++) {
+//		model.a[6] = - model.Ic[6].toMatrix().inverse() * model.f[6];
+        model.a[1] = - model.Ic[1].toMatrix().inverse() * model.f[1];
+//		for (unsigned int i = 7; i < model.mBodies.size(); i++) {
+        for (unsigned int i = 1; i < model.mBodies.size(); i++) {
 			unsigned int lambda = model.lambda[i];
 			model.a[i] = model.X_lambda[i].apply(model.a[lambda]);
 
@@ -343,7 +360,7 @@ void FloatingBaseInverseDynamics(RigidBodyDynamics::Model& model,
 {//TODO develop this algorithm (probably a general hybrid dynamics?)
 	using namespace RigidBodyDynamics;
 	using namespace RigidBodyDynamics::Math;
-
+//    std::cout << "Total body size: " << model.mBodies.size() << std::endl;
 	LOG << "-------- " << __func__ << " --------" << std::endl;
 
 	// First pass

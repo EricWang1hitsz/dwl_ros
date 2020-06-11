@@ -393,7 +393,7 @@ void WholeBodyKinematics::computeJointAcceleration(Eigen::VectorXd& joint_acc,
 	}
 }
 
-
+// todo the oder of jacobian is according to URDF/RBDL
 void WholeBodyKinematics::computeJacobian(Eigen::MatrixXd& jacobian,
 										  const rbd::Vector6d& base_pos,
 										  const Eigen::VectorXd& joint_pos,
@@ -417,7 +417,9 @@ void WholeBodyKinematics::computeJacobian(Eigen::MatrixXd& jacobian,
 	// Computing the number of active end-effectors
 	int num_body_set = getNumberOfActiveEndEffectors(body_set);
 
-	jacobian.resize(num_vars * num_body_set, system_.getSystemDoF());
+    jacobian.resize(num_vars * num_body_set, system_.getSystemDoF());
+    // check jacobian matrix rows and cols.
+    std::cout << "Full Jacobian Matrix Size:" << jacobian.rows() << "x" << jacobian.cols() << std::endl;
 	jacobian.setZero();
 
 	// Adding the jacobian only for the active end-effectors
@@ -427,14 +429,17 @@ void WholeBodyKinematics::computeJacobian(Eigen::MatrixXd& jacobian,
 			body_iter++)
 	{
 		int init_row = body_counter * num_vars;
+        std::cout << "init row: " << init_row << std::endl;
 
 		std::string body_name = *body_iter;
 		if (body_id_.count(body_name) > 0) {
 			int body_id = body_id_.find(body_name)->second;
 
+            std::cout << "body counter: " << body_counter << "and body name: " << body_name << std::endl;
 			Eigen::VectorXd q = system_.toGeneralizedJointState(base_pos, joint_pos);
 
 			Eigen::MatrixXd jac(Eigen::MatrixXd::Zero(6, system_.getSystemDoF()));
+            // body_point_position is coordinates of the point in body coordinates, so set zero
 			if (body_counter == 0) {
 				rbd::computePointJacobian(system_.getRBDModel(),
 										  q, body_id,
@@ -446,26 +451,38 @@ void WholeBodyKinematics::computeJacobian(Eigen::MatrixXd& jacobian,
 										  Eigen::Vector3d::Zero(),
 										  jac, false);
 			}
-			if (system_.isFullyFloatingBase()) {
-				// RBDL defines floating joints as (linear, angular)^T which is
-				// not consistent with our DWL standard, i.e. (angular, linear)^T
-				Eigen::MatrixXd copy_jac = jac.block<6,6>(0,0);
-				jac.block<6,3>(0,0) = copy_jac.rightCols(3);
-				jac.block<6,3>(0,3) = copy_jac.leftCols(3);
-			}
+            if (system_.isFullyFloatingBase()) {
+                // RBDL defines floating joints as (linear, angular)^T which is
+                // not consistent with our DWL standard, i.e. (angular, linear)^T
+                Eigen::MatrixXd copy_jac = jac.block<6,6>(0,0);
+                jac.block<6,3>(0,0) = copy_jac.rightCols(3);
+                jac.block<6,3>(0,3) = copy_jac.leftCols(3);
+            }
 
-			switch(component) {
-			case rbd::Linear:
-				jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
-						jac.block(3, 0, 3, system_.getSystemDoF());
-				break;
-			case rbd::Angular:
-				jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
-						jac.block(0, 0, 3, system_.getSystemDoF());
-				break;
-			case rbd::Full:
-				jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) = jac;
-				break;
+            switch(component) {
+            case rbd::Linear:
+                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
+                        jac.block(3, 0, 3, system_.getSystemDoF());
+                break;
+            case rbd::Angular:
+                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
+                        jac.block(0, 0, 3, system_.getSystemDoF());
+                break;
+            case rbd::Full:
+                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) = jac;
+                break;
+//            switch(component) {
+//            case rbd::Linear:
+//                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
+//                        jac.block(0, 0, 3, system_.getSystemDoF());
+//                break;
+//            case rbd::Angular:
+//                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) =
+//                        jac.block(3, 0, 3, system_.getSystemDoF());
+//                break;
+//            case rbd::Full:
+//                jacobian.block(init_row, 0, num_vars, system_.getSystemDoF()) = jac;
+//                break;
 			}
 			++body_counter;
 		}
@@ -475,8 +492,8 @@ void WholeBodyKinematics::computeJacobian(Eigen::MatrixXd& jacobian,
 
 void WholeBodyKinematics::computeFixedJacobian(Eigen::MatrixXd& jacobian,
 											   const Eigen::VectorXd& joint_pos,
-											   const std::string& body_name,
-											   enum rbd::Component component)
+                                               const std::string& body_name, // Contact
+                                               enum rbd::Component component) // Linear
 {
 	// Resizing the jacobian matrix
 	int num_vars = 0;
@@ -498,14 +515,18 @@ void WholeBodyKinematics::computeFixedJacobian(Eigen::MatrixXd& jacobian,
 	computeJacobian(full_jac,
 					rbd::Vector6d::Zero(), joint_pos,
 					body_set, component);
-
+//    std::cout << "full jacobian:" << full_jac << std::endl;
 	// Getting the position index and number of the dof of the branch
 	unsigned int q_index, num_dof;
-	system_.getBranch(q_index, num_dof, body_name);
-	jacobian = full_jac.block(0, q_index, num_vars, num_dof);
+    // FIXME(EricWang): error.
+    system_.getBranch(q_index, num_dof, body_name);
+//    std::cout << "start jocobian" << std::endl;
+    jacobian = full_jac.block(0, q_index, num_vars, num_dof); // size num_vars x num_dof from 0 , q_index
+//    std::cout << "jocabian:" << jacobian << std::endl;
+    std::cout << "Compute Fixed Jacobian Once" << std::endl;
 }
 
-
+// indicates the relation between base motion and contact constraints.
 void WholeBodyKinematics::getFloatingBaseJacobian(Eigen::MatrixXd& jacobian,
 												  const Eigen::MatrixXd& full_jacobian)
 {
@@ -529,7 +550,7 @@ void WholeBodyKinematics::getFloatingBaseJacobian(Eigen::MatrixXd& jacobian,
 	}
 }
 
-
+// indicates the relation between join motion and contact constraints.
 void WholeBodyKinematics::getFixedBaseJacobian(Eigen::MatrixXd& jacobian,
 											   const Eigen::MatrixXd& full_jacobian)
 {

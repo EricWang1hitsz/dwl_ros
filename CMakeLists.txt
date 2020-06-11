@@ -18,20 +18,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PkgConfig)
 #find_package(IPOPT 3.12.4 REQUIRED)
 pkg_check_modules(IPOPT ipopt>=3.12.4)
-#pkg_check_modules(YAMLCPP)
-
-##Find yaml_cpp dependency.
-#pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
-
-#find_path(YAML_CPP_INCLUDE_DIR
-#    NAMES yaml_cpp.h
-#    PATHS ${YAML_CPP_INCLUDE_DIRS})
-
-#find_library(YAML_CPP_LIBRARY
-#    NAMES YAML_CPP
-#    PATHS ${YAML_CPP_LIBRARY_DIRS})
-
-#link_directories(${YAML_CPP_LIBRARY_DIRS})
+#pkg_check_modules(YAMLCPP yaml-cpp)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -146,7 +133,6 @@ include_directories(
  ${RBDL_INCLUDE_DIRS}
  ${YAML_CPP_INCLUDE_DIR}
 )
-
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/dwl_ros.cpp
@@ -214,7 +200,7 @@ add_library(${PROJECT_NAME} SHARED
                                     src/utils/SplineInterpolation.cpp
                                     src/utils/YamlWrapper.cpp
                                     src/utils/CollectData.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES} ${RBDL_URDFReader_LIBRARY})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES} ${RBDL_LIBRARIES} ${RBDL_URDFReader_LIBRARY} ${YAML_CPP_LIBRARIES})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -226,13 +212,19 @@ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${IPOPT_LIBRARIES} ${Y
 # add_executable(${PROJECT_NAME}_node src/dwl_ros_node.cpp)
 
 ## Floating base system test.
-add_executable(FloatingBaseSample src/test/FloatingBaseSample.cpp)
-target_link_libraries(FloatingBaseSample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES})
+#add_executable(FloatingBaseSample src/test/FloatingBaseSample.cpp)
+#target_link_libraries(FloatingBaseSample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${RBDL_LIBRARIES} ${YAML_CPP_LIBRARIES})
+
+## Whole body kinematics test.
+add_executable(wholebodykinematicssample src/test/WholeBodyKinematicsSample.cpp)
+target_link_libraries(wholebodykinematicssample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${RBDL_LIBRARIES} ${YAML_CPP_LIBRARIES})
 
 ## Whole body dynamics test.
 add_executable(wholebodydynamicssample src/test/WholeBodyDynamicsSample.cpp)
-target_link_libraries(wholebodydynamicssample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES})
+target_link_libraries(wholebodydynamicssample ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${RBDL_LIBRARIES} ${YAML_CPP_LIBRARIES})
 
+#add_executable(wholebodycontroller src/test/WholeBodyController.cpp)
+#target_link_libraries(wholebodycontroller ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES} ${YAML_CPP_LIBRARIES} ${RBDL_LIBRARIES})
 #add_executable(dwl_test src/test/dwl_test.cpp)
 #target_link_libraries(dwl_test ${catkin_LIBRARIES} ${PROJECT_NAME} ${IPOPT_LIBRARIES})
 ## Rename C++ executable without prefix

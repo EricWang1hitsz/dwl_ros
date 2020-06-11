@@ -116,7 +116,8 @@ void FloatingBaseSystem::resetFromURDFModel(const std::string& urdf_model,
 
 	// Getting the floating-base system information
 	num_system_joints_ = num_floating_joints_ + num_joints_;
-	if (isFullyFloatingBase()) {
+    if (isFullyFloatingBase()) {// real fully floating base systems!
+        std::cout << "Fully Floating Base System!!!" << std::endl;
 		num_system_joints_ = 6 + num_joints_;
         if (hasFloatingBaseConstraints()) // any of 6 DOF is constrained.
 			type_of_system_ = ConstrainedFloatingBase;
@@ -429,7 +430,7 @@ const unsigned int& FloatingBaseSystem::getFloatingBaseDoF() const
 
 const unsigned int& FloatingBaseSystem::getJointDoF() const
 {
-	return num_joints_;
+    return num_joints_; // 12 actual joint.
 }
 
 
@@ -720,26 +721,32 @@ void FloatingBaseSystem::fromGeneralizedJointState(rbd::Vector6d& base_state,
 }
 
 
-void FloatingBaseSystem::setBranchState(Eigen::VectorXd& new_joint_state,
+void FloatingBaseSystem::setBranchState(Eigen::VectorXd& new_joint_state,// 12 actual joints
 										const Eigen::VectorXd& branch_state,
 										std::string body_name)
 {
 	// Getting the branch properties
 	unsigned int q_index, num_dof;
 	getBranch(q_index, num_dof, body_name);
-
+    std::cout << "branch state size:" << branch_state.size()<< " " << "num dof:" << num_dof << std::endl;
+    // TODO(EricWang): q_index has a error.
+//    q_index = 36;
 	// Removing the base index
-	if (isFullyFloatingBase())
-		q_index -= 6;
-	else
-		q_index -= getFloatingBaseDoF();
+//	if (isFullyFloatingBase())
+//		q_index -= 6;
+//	else
+//		q_index -= getFloatingBaseDoF();
 
-	if (branch_state.size() != num_dof) {
-		printf(RED "FATAL: the branch state dimension is not consistent\n" COLOR_RESET);
-		exit(EXIT_FAILURE);
-	}
-
+//    if (branch_state.size() != num_dof) {
+//        printf(RED "FATAL: the branch state dimension is not consistent\n" COLOR_RESET);
+//        exit(EXIT_FAILURE);
+//    }
+//    std::cout << "branch state size:" << branch_state.size()<< " " << "num dof:" << num_dof << std::endl;
+    // FIXME(EricWang): Segmentation fault (core dumped).
+    std::cout << "q index:" << q_index << std::endl;
+    // FIXME(EricWang): q index:4294967290.
 	new_joint_state.segment(q_index, num_dof) = branch_state;
+    std::cout << "test6" << std::endl;
 }
 
 
@@ -751,10 +758,10 @@ Eigen::VectorXd FloatingBaseSystem::getBranchState(Eigen::VectorXd& joint_state,
 	getBranch(q_index, num_dof, body_name);
 
 	// Removing the base index
-	if (isFullyFloatingBase())
-		q_index -= 6;
-	else
-		q_index -= getFloatingBaseDoF();
+//	if (isFullyFloatingBase())
+//		q_index -= 6;
+//	else
+//		q_index -= getFloatingBaseDoF();
 
 	Eigen::VectorXd branch_state(num_dof);
 	branch_state = joint_state.segment(q_index, num_dof);
@@ -762,42 +769,95 @@ Eigen::VectorXd FloatingBaseSystem::getBranchState(Eigen::VectorXd& joint_state,
 	return branch_state;
 }
 
-
-void FloatingBaseSystem::getBranch(unsigned int& pos_idx,
-		   	   	   	   	   	   	   unsigned int& num_dof,
-								   const std::string& body_name)
+void FloatingBaseSystem::getBranch(unsigned int &pos_idx, unsigned int &num_dof, const std::string &body_name)
 {
-	// Getting the body id
-	unsigned int body_id = rbd_model_.GetBodyId(body_name.c_str());
+    num_dof = 3;
 
-	// Getting the base joint id. Note that the floating-base starts the
-	// kinematic-tree
-	unsigned int base_id = 0;
-	if (isFullyFloatingBase()) {
-		base_id = 6;
-	} else {
-		base_id = getFloatingBaseDoF();
-	}
-
-	// Setting the state values of a specific branch to the joint state
-	unsigned int parent_id = body_id;
-	if (rbd_model_.IsFixedBodyId(body_id)) {
-		unsigned int fixed_idx = rbd_model_.fixed_body_discriminator;
-		parent_id = rbd_model_.mFixedBodies[body_id - fixed_idx].mMovableParent;
-	}
-
-	// Adding the branch state to the joint state. Two safety checking are done;
-	// checking that this branch has at least one joint, and checking the size
-	// of the new branch state
-	num_dof = 0;
-	if (parent_id != base_id) {
-		do {
-			pos_idx = rbd_model_.mJoints[parent_id].q_index;
-			parent_id = rbd_model_.lambda[parent_id];
-			++num_dof;
-		} while (parent_id != base_id);
-	}
+    if(body_name == "lf_foot")
+    {
+        pos_idx = 0;
+    }
+    if(body_name == "lh_foot")
+    {
+        pos_idx = 3;
+    }
+    if(body_name == "rf_foot")
+    {
+        pos_idx = 6;
+    }
+    if(body_name == "rh_foot")
+    {
+        pos_idx = 9;
+    }
 }
+//void FloatingBaseSystem::getBranch(unsigned int& pos_idx, //  the beginning joint.
+//                                   unsigned int& num_dof, // very impartant!!!!!!!
+//                                   const std::string& body_name)//contact name
+//{
+//	// Getting the body id
+//	unsigned int body_id = rbd_model_.GetBodyId(body_name.c_str());
+//    std::cout << "body id:" << body_id << std::endl; /// 2147483647
+
+//	// Getting the base joint id. Note that the floating-base starts the
+//	// kinematic-tree
+//	unsigned int base_id = 0;
+//	if (isFullyFloatingBase()) {
+//		base_id = 6;
+//	} else {
+//		base_id = getFloatingBaseDoF();
+//	}
+//    std::cout << "base_id:" << base_id << std::endl; /// 6
+//	// Setting the state values of a specific branch to the joint state
+//	unsigned int parent_id = body_id;
+//    if (rbd_model_.IsFixedBodyId(body_id)) //Checks whether the body is rigidly attached to another body.
+//    {// fixed_body_discriminator - 1 moving body,
+//        unsigned int fixed_idx = rbd_model_.fixed_body_discriminator; // Value that is used to discriminate between fixed and movable bodies
+//        std::cout << "fixed idx:" << fixed_idx << std::endl; /// 2147483647
+//        //! eric_wang: return the parent body id of this fixed body.
+////        for(int i = 0; i < rbd_model_.mFixedBodies.size(); i++)
+////        {
+////            std::cout << "all parent id:" << rbd_model_.mFixedBodies[i].mMovableParent << std::endl;
+////        }
+//        std::cout << "Branch:fixedbody size:" << rbd_model_.mFixedBodies.size() << std::endl;
+//        parent_id = rbd_model_.mFixedBodies[body_id - fixed_idx].mMovableParent;// Id of the movable body that this fixed body is attached to.
+////        std::cout << "parent id:" << parent_id << std::endl; /// 5 8 11 14 are four legs' parent body id.
+//	}
+
+//	// Adding the branch state to the joint state. Two safety checking are done;
+//	// checking that this branch has at least one joint, and checking the size
+//	// of the new branch state
+//	num_dof = 0;
+////    for(int i = 0; i < rbd_model_.lambda.size(); i++)
+////    {
+////        std::cout << "all parent id:" << rbd_model_.lambda[i] << std::endl;
+////    }
+////    if (parent_id != base_id) {// The starts of the branch is detected when its parent frame is equals to the base frame.
+//////    if (parent_id != pos_idx) {
+////        do {
+////            // FIXME(EricWang): loop all the time.
+//////            std::cout << num_dof << std::endl;
+////            pos_idx = rbd_model_.mJoints[parent_id].q_index;
+////            std::cout << "position index:" << pos_idx << std::endl; /// parent_id + 3;
+////            parent_id = rbd_model_.lambda[parent_id]; // The id of the parents body
+////            std::cout << "parent id:" << parent_id << std::endl; ///
+////            ++num_dof; // TODO(EricWang): should be 3.
+////        } while (parent_id != base_id);
+//////        } while (parent_id != pos_idx);
+//////        std::cout << num_dof << std::endl;
+////    }
+//    /////////////
+//    std::cout << "mjoint total:" << rbd_model_.mJoints.size() << std::endl;
+//    for(int i = 0; i < rbd_model_.mJoints.size(); i ++)
+//    {
+//        std::cout << "mJoints[" << i << "] q_index:" << rbd_model_.mJoints[i].q_index << std::endl;
+//    }
+//    ////////////
+//    pos_idx = rbd_model_.mJoints[parent_id].q_index;
+//    std::cout << "position index:" << pos_idx << std::endl;
+//    num_dof = 3;
+//    std::cout << "num dof:" << num_dof << std::endl;
+//    std::cout << body_name << " " << "check ended" << std::endl;
+//}
 
 
 const Eigen::VectorXd& FloatingBaseSystem::getDefaultPosture() const

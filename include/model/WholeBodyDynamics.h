@@ -148,7 +148,18 @@ class WholeBodyDynamics
 		 */
 		const Eigen::MatrixXd& computeJointSpaceInertiaMatrix(const rbd::Vector6d& base_pos,
 															  const Eigen::VectorXd& joint_pos);
-
+        /**
+         * @brief compute Coriolis, centrifugal and gravity force
+         * @param base_pos
+         * @param joint_pos
+         * @param base_vel
+         * @param joint_vel
+         * @return
+         */
+        const Eigen::VectorXd& computeNonlinearEffectsForce(const rbd::Vector6d& base_pos,
+                                                            const Eigen::VectorXd& joint_pos,
+                                                            const rbd::Vector6d& base_vel,
+                                                            const Eigen::VectorXd& joint_vel);
 		/**
 		 * @brief Computes the centroidal inertia matrix
 		 * @param const Eigen::Vector6d& Base position
@@ -416,6 +427,9 @@ class WholeBodyDynamics
 
 		/** @brief The joint-space inertial matrix of the system */
 		Eigen::MatrixXd joint_inertia_mat_;
+
+        /** @brief The Coriolis, centrifugal and gravity force */
+        Eigen::VectorXd nonliner_effects_;
 
 		/** @brief The centroidal inertia matrix */
 		rbd::Matrix6d com_inertia_mat_;

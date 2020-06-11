@@ -81,7 +81,7 @@ void WholeBodyDynamics::computeInverseDynamics(rbd::Vector6d& base_wrench,
 	system_.fromGeneralizedJointState(base_wrench, joint_forces, tau);
 }
 
-
+// not all of jo
 void WholeBodyDynamics::computeFloatingBaseInverseDynamics(rbd::Vector6d& base_acc,
 														   Eigen::VectorXd& joint_forces,
 														   const rbd::Vector6d& base_pos,
@@ -105,8 +105,8 @@ void WholeBodyDynamics::computeFloatingBaseInverseDynamics(rbd::Vector6d& base_a
 	convertAppliedExternalForces(fext, ext_force, q);
 
 	// Computing the inverse dynamics with Recursive Newton-Euler Algorithm (RNEA)
-    //! eric_wang: Base DOF 6;
     if (system_.isFullyFloatingBase()) {
+        std::cout << "Fully Floating Base System When ID" << std::endl;
 		RigidBodyDynamics::Math::SpatialVector base_ddot =
 				RigidBodyDynamics::Math::SpatialVector(base_acc);
 		rbd::FloatingBaseInverseDynamics(system_.getRBDModel(),
@@ -135,7 +135,6 @@ void WholeBodyDynamics::computeFloatingBaseInverseDynamics(rbd::Vector6d& base_a
 	system_.fromGeneralizedJointState(base_wrench, joint_forces, tau);
 }
 
-//! eric_wang: should use this model and need to estimate contact force first.
 void WholeBodyDynamics::computeConstrainedFloatingBaseInverseDynamics(Eigen::VectorXd& joint_forces,
 																	  const rbd::Vector6d& base_pos,
 																	  const Eigen::VectorXd& joint_pos,
@@ -185,23 +184,41 @@ const Eigen::MatrixXd& WholeBodyDynamics::computeJointSpaceInertiaMatrix(const r
     // \f$ M(q) \f$
 	RigidBodyDynamics::CompositeRigidBodyAlgorithm(system_.getRBDModel(),
 												   q, joint_inertia_mat_, true);
-
+    //-------------------------------------------------------
+    //! Question Why needs to change the order?
+    //-------------------------------------------------------
 	// Changing the floating-base inertia matrix component to the order
 	// [Angular, Linear]
-	if (system_.isFullyFloatingBase()) {
-		Eigen::MatrixXd base_lin_mat = joint_inertia_mat_.block<3,6>(0,0);
-		Eigen::MatrixXd base_ang_mat = joint_inertia_mat_.block<3,6>(3,0);
+//	if (system_.isFullyFloatingBase()) {
+//		Eigen::MatrixXd base_lin_mat = joint_inertia_mat_.block<3,6>(0,0);
+//		Eigen::MatrixXd base_ang_mat = joint_inertia_mat_.block<3,6>(3,0);
 
-		// Writing the new order
-		joint_inertia_mat_.block<3,6>(rbd::AX, 0) << base_ang_mat.rightCols(3),
-				base_ang_mat.leftCols(3);
-		joint_inertia_mat_.block<3,6>(rbd::LX, 0) << base_lin_mat.rightCols(3),
-				base_lin_mat.leftCols(3);
-	}
+//		// Writing the new order
+//		joint_inertia_mat_.block<3,6>(rbd::AX, 0) << base_ang_mat.rightCols(3),
+//				base_ang_mat.leftCols(3);
+//		joint_inertia_mat_.block<3,6>(rbd::LX, 0) << base_lin_mat.rightCols(3),
+//				base_lin_mat.leftCols(3);
+//	}
 
 	return joint_inertia_mat_;
 }
 
+const Eigen::VectorXd& WholeBodyDynamics::computeNonlinearEffectsForce(const rbd::Vector6d& base_pos,
+                                                                       const Eigen::VectorXd& joint_pos,
+                                                                       const rbd::Vector6d& base_vel,
+                                                                       const Eigen::VectorXd& joint_vel)
+{
+    Eigen::VectorXd q = system_.toGeneralizedJointState(base_pos, joint_pos);
+    Eigen::VectorXd q_dot = system_.toGeneralizedJointState(base_vel, joint_vel);
+    nonliner_effects_ = Eigen::VectorXd::Zero(system_.getSystemDoF());
+
+//    std::vector<SpatialVector_t> fext;
+    // TODO(EricWang): Need to change the order?
+    RigidBodyDynamics::NonlinearEffects(system_.getRBDModel(), q, q_dot, nonliner_effects_, NULL);
+
+    return nonliner_effects_;
+
+}
 
 const rbd::Matrix6d& WholeBodyDynamics::computeCentroidalInertiaMatrix(const rbd::Vector6d& base_pos,
 																	   const Eigen::VectorXd& joint_pos)
@@ -256,7 +273,7 @@ void WholeBodyDynamics::computeContactForces(rbd::BodyVector6d& contact_forces,
 	kinematics_.computeJacobian(full_jac,
 								base_pos, joint_pos,
 								contacts, rbd::Linear);
-
+    std::cout << "test1" << std::endl;
 	// Computing the consistent joint accelerations given a desired base
 	// acceleration and contact definition. We assume that contacts are static,
 	// which it allows us to computed a consistent joint accelerations.
@@ -267,7 +284,7 @@ void WholeBodyDynamics::computeContactForces(rbd::BodyVector6d& contact_forces,
 											 base_vel, joint_vel,
 											 base_acc, joint_acc,
 											 contacts);
-
+    std::cout << "test2" << std::endl;
 	// Computing the desired base wrench assuming a fully actuation on the
 	// floating-base
 	rbd::Vector6d base_wrench;
@@ -377,6 +394,7 @@ void WholeBodyDynamics::estimateContactForces(rbd::BodyVector6d& contact_forces,
 {
 	// Computing the estimated joint forces assuming that there aren't
 	// contact forces
+    std::cout << "Estimate Contact Forces:" << std::endl;
 	dwl::rbd::Vector6d base_wrench;
 	Eigen::VectorXd estimated_joint_forces;
 	computeInverseDynamics(base_wrench, estimated_joint_forces,
@@ -386,26 +404,34 @@ void WholeBodyDynamics::estimateContactForces(rbd::BodyVector6d& contact_forces,
 
 	// Computing the joint force error
 	Eigen::VectorXd joint_force_error = estimated_joint_forces - joint_forces;
-
+    std::cout << "joint force error:" << joint_force_error << std::endl;
+    std::cout << "contact size:" << contacts.size() << std::endl;
 	// Computing the contact forces
+    // FIXME(EricWang): Can't jump out from loop.
 	for (rbd::BodySelector::const_iterator contact_iter = contacts.begin();
 			contact_iter != contacts.end();
 			contact_iter++)
 	{
+        std::cout << *contact_iter << std::endl;
 		std::string body_name = *contact_iter;
-		rbd::BodySelector body(contact_iter, contact_iter + 1);
+//		rbd::BodySelector body(contact_iter, contact_iter + 1);
 
 		Eigen::MatrixXd fixed_jac;
+//        std::cout << "testnnnn" << std::endl;
+        // FIXME(EricWang): TODO
 		kinematics_.computeFixedJacobian(fixed_jac,
 										 joint_pos,
 										 body_name, rbd::Linear);
-
-		Eigen::Vector3d force =
-				math::pseudoInverse((Eigen::MatrixXd) fixed_jac.transpose()) *
-				system_.getBranchState(joint_force_error, body_name);
-
+        std::cout << "fixed jacobian:" << fixed_jac << std::endl;
+        Eigen::Vector3d force;
+        // FIXME(EricWang): Segmentation fault (core dumped).
+//		Eigen::Vector3d force =
+//				math::pseudoInverse((Eigen::MatrixXd) fixed_jac.transpose()) *
+//				system_.getBranchState(joint_force_error, body_name);
+        std::cout << "force computed once" << std::endl;
 		contact_forces[body_name] << 0, 0, 0, force;
 	}
+    std::cout << "for end" << std::endl;
 }
 
 
@@ -639,6 +665,7 @@ void WholeBodyDynamics::estimateActiveContactsAndForces(rbd::BodySelector& activ
 														const rbd::BodySelector& contacts,
 														double force_threshold)
 {
+    std::cout << "Estimate active contact and forces" << std::endl;
 	// Computing the contact forces for a predefined set of end-effector
 	estimateContactForces(contact_forces,
 						 base_pos, joint_pos,
@@ -692,6 +719,7 @@ void WholeBodyDynamics::getActiveContacts(rbd::BodySelector& active_contacts,
 										  const rbd::BodyVector6d& contact_forces,
 										  double force_threshold)
 {
+    std::cout << "Get Active Contacts" << std::endl;
 	// Detecting active end-effector by using a force threshold
 	for (rbd::BodyVector6d::const_iterator endeffector_it = contact_forces.begin();
 			endeffector_it != contact_forces.end(); endeffector_it++) {
@@ -790,7 +818,7 @@ void WholeBodyDynamics::computeConstrainedConsistentAcceleration(rbd::Vector6d& 
 								base_pos, joint_pos,
 								base_vel, joint_vel,
 								contacts, rbd::Linear);
-
+    std::cout << "Contact Size:" << contacts.size() << std::endl;
 	// Computing the consistent joint acceleration given a base state
 	for (rbd::BodySelector::const_iterator contact_iter = contacts.begin();
 			contact_iter != contacts.end();
@@ -817,9 +845,10 @@ void WholeBodyDynamics::computeConstrainedConsistentAcceleration(rbd::Vector6d& 
 			// since we are doing computation in the base frame
 			Eigen::VectorXd q_dd =
 					math::pseudoInverse(fixed_jac) * (contact_acc - jacd_qd[contact_name]);
-
+            std::cout << "test3" << std::endl;
 			// Setting up the branch joint acceleration
 			system_.setBranchState(joint_feas_acc, q_dd, contact_name);
+            std::cout << "test4" << std::endl;
 		}
 	}
 }

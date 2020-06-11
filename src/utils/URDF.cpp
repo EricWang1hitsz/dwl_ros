@@ -41,17 +41,21 @@ void getJointNames(JointID& joints,
 	std::stack<int> branch_index_stack;
 
 	// Adding the bodies in a depth-first order of the model tree
-	std::map<std::string, boost::shared_ptr<urdf::Link> > link_map = model->links_;
+    std::map<std::string, boost::shared_ptr<urdf::Link> > link_map = model->links_; // all links
+//    std::cout << "URDF: All links size:" << link_map.size() << std::endl; /// total 18 links.
 	link_stack.push(link_map[model->getRoot()->name]);
-
-	if (link_stack.top()->child_joints.size() > 0) {
+//    std::cout << "URDF:Root link name:" << model->getRoot()->name << std::endl;  /// base_link
+//    std::cout << "URDF: Child joints size of the root link:" << link_stack.top()->child_joints.size() << std::endl; /// 1, run 4 times.
+    if (link_stack.top()->child_joints.size() > 0) {
 		branch_index_stack.push(0);
 	}
 
 	unsigned int joint_idx = 0;
 	while (link_stack.size() > 0) {
-		boost::shared_ptr<urdf::Link> current_link = link_stack.top();
+//        std:: cout << "URDF:Link stack size:" << link_stack.size() << std::endl; /// 12345654321
+        boost::shared_ptr<urdf::Link> current_link = link_stack.top(); // base_link
 		unsigned int branch_idx = branch_index_stack.top();
+//        std::cout << "URDF:branch idx:" << branch_idx << std::endl; // 0 1 2 3 4 four leg
 
 		if (branch_idx < current_link->child_joints.size()) {
 			boost::shared_ptr<urdf::Joint> current_joint =
@@ -104,8 +108,9 @@ void getJointNames(JointID& joints,
 		} else {
 			link_stack.pop();
 			branch_index_stack.pop();
-		}
-	}
+        }
+//        std::cout << "URDF:joint id:" << joint_idx << std::endl; /// 1 ~ 13
+    }
 }
 
 

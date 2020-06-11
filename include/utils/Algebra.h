@@ -4,6 +4,7 @@
 #include <utils/Macros.h>
 #include <Eigen/Dense>
 #include <vector>
+#include <Eigen/Core>
 
 
 namespace dwl

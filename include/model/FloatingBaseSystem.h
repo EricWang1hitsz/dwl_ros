@@ -384,8 +384,8 @@ class FloatingBaseSystem
 		 * @param unsigned int& Degrees of freedom of the body branch
 		 * @param const std::string& Name of the body branch (end-effector name)
 		 */
-		void getBranch(unsigned int& pos_idx,
-					   unsigned int& num_dof,
+        void getBranch(unsigned int& pos_idx,
+                       unsigned int& num_dof,
 					   const std::string& body_name);
 
 		/**
